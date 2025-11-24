@@ -1,0 +1,43 @@
+# Maven build directories
+**/target/
+**/out/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# AWS credentials (NEVER PUSH)
+*.pem
+*.key
+.aws/
+credentials
+config
+
+# Logs
+*.log
+
+# Local CSV test files
+*.csv
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# IntelliJ / Eclipse 
+.idea/
+*.iml
+.project
+.classpath
+
+
