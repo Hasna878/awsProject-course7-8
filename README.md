@@ -83,11 +83,11 @@ awsProject/
 ### Local
 - Java 17
 - Maven 3.8+
-- AWS CLI (optionnel)
+- AWS CLI 
 
 ### AWS
-- 1 instance EC2 (Amazon Linux 2023)
-- 1 bucket S3 (ex: iot-traffic-aymane)
+- 1 instance EC2 
+- 1 bucket S3 
 - 2 files SQS :
   - summarize-queue
   - consolidate-queue
