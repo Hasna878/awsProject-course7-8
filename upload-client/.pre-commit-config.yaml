@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: maven-checkstyle
+        name: Maven Checkstyle (pre-commit)
+        entry: mvn -q -DskipTests checkstyle:check
+        language: system
+        pass_filenames: false
