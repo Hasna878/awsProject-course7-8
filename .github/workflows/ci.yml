@@ -6,13 +6,18 @@ on:
 
 jobs:
   test:
-    name: Build & Test (Java ${{ matrix.java }})
+    name: Test ${{ matrix.module }} (Java ${{ matrix.java }})
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         java: [17, 21]
+        module:
+          - upload-client
+          - summarize-worker
+          - consolidator-worker
+          - export-client
 
     steps:
       - name: Checkout repository
@@ -25,5 +30,6 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: maven
 
-      - name: Build and run unit tests
+      - name: Build and run unit tests (module)
+        working-directory: ${{ matrix.module }}
         run: mvn -B clean test
