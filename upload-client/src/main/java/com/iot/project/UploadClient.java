@@ -7,11 +7,13 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+
 /**
  * UploadClient is responsible for uploading IoT files to AWS S3
  * and sending notifications/messages to an AWS SQS queue.
@@ -28,42 +30,71 @@ import java.nio.file.Paths;
  * java UploadClient <localFilePath> <bucketName> <queueUrl>
  * }</pre>
  *
- * @author 
+ * @author EMSE
  * @since 1.0
  */
-
 public class UploadClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(UploadClient.class);
+    /**
+     * Logger for application events.
+     */
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(UploadClient.class);
 
+    /**
+     * AWS region for service clients.
+     */
+    private static final Region AWS_REGION = Region.EU_WEST_3;
 
+    /**
+     * Expected number of CLI arguments.
+     */
+    private static final int EXPECTED_ARGS_COUNT = 3;
+
+    /**
+     * Usage message for CLI invocation.
+     */
+    private static final String USAGE =
+            "Usage: java UploadClient <localFilePath> <bucketName> <queueUrl>";
+
+    /**
+     * Amazon S3 client for uploads.
+     */
     private final S3Client s3;
+
+    /**
+     * Amazon SQS client for notifications.
+     */
     private final SqsClient sqs;
-    
+
     /**
      * Creates an UploadClient configured for AWS Region EU_WEST_3.
      * Credentials are automatically loaded using DefaultCredentialsProvider.
      */
-
     public UploadClient() {
         this.s3 = S3Client.builder()
-                .region(Region.EU_WEST_3)   // Change selon la région (Paris)
+                .region(AWS_REGION)
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
 
         this.sqs = SqsClient.builder()
-                .region(Region.EU_WEST_3)
+                .region(AWS_REGION)
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
     }
-   /**
+
+    /**
      * Uploads a local file to an S3 bucket.
      *
      * @param bucketName the name of the S3 bucket
      * @param key        the destination key (path) inside the bucket
      * @param filePath   the local file path to upload
      */
-    public void uploadFileToS3(String bucketName, String key, String filePath) {
+    public void uploadFileToS3(
+            final String bucketName,
+            final String key,
+            final String filePath
+    ) {
         System.out.println("Uploading file to S3...");
 
         PutObjectRequest request = PutObjectRequest.builder()
@@ -72,16 +103,19 @@ public class UploadClient {
                 .build();
 
         s3.putObject(request, Paths.get(filePath));
-        System.out.println("✔ File uploaded to S3: " + bucketName + "/" + key);
+        System.out.println("File uploaded to S3: " + bucketName + "/" + key);
     }
+
     /**
      * Sends a message to an SQS queue.
      *
      * @param queueUrl     the SQS queue URL
      * @param messageBody  the body of the message to send
      */
-
-    public void sendMessageToSqs(String queueUrl, String messageBody) {
+    public void sendMessageToSqs(
+            final String queueUrl,
+            final String messageBody
+    ) {
         System.out.println("Sending message to SQS...");
 
         SendMessageRequest request = SendMessageRequest.builder()
@@ -92,7 +126,8 @@ public class UploadClient {
         sqs.sendMessage(request);
         System.out.println("SQS message sent!");
     }
-     /**
+
+    /**
      * CLI entry point for uploading a file and triggering a worker via SQS.
      *
      * Expected arguments:
@@ -104,22 +139,25 @@ public class UploadClient {
      *
      * @param args command-line arguments
      */
-
-    public static void main(String[] args) {
-        
-        logger.info("Starting UploadClient application...");
-        logger.debug("Program started with {} argument(s): {}", args.length, java.util.Arrays.toString(args));
+    public static void main(final String[] args) {
+        LOGGER.info("Starting UploadClient application...");
+        LOGGER.debug(
+                "Program started with {} argument(s): {}",
+                args.length,
+                Arrays.toString(args)
+        );
         if (args.length == 0) {
-        logger.warn("No arguments were provided to UploadClient. Using default configuration.");
+            LOGGER.warn(
+                    "No arguments were provided. Using default configuration."
+            );
         }
 
         String example = "debug test";
-        logger.info("Example variable: {}", example);
+        LOGGER.info("Example variable: {}", example);
 
-
-        try{
-            if (args.length != 3) {
-                System.out.println("Usage: java UploadClient <localFilePath> <bucketName> <queueUrl>");
+        try {
+            if (args.length != EXPECTED_ARGS_COUNT) {
+                System.out.println(USAGE);
                 System.exit(1);
             }
 
@@ -127,23 +165,36 @@ public class UploadClient {
             String bucket = args[1];
             String queueUrl = args[2];
 
-            String key = "raw/" + Paths.get(filePath).getFileName().toString();
+            Path file = Paths.get(filePath);
+            Path fileName = file.getFileName();
+            if (fileName == null) {
+                throw new IllegalArgumentException(
+                        "File path must include a file name."
+                );
+            }
+            String key = "raw/" + fileName.toString();
 
             UploadClient client = new UploadClient();
 
             // Upload du fichier IoT vers S3
             client.uploadFileToS3(bucket, key, filePath);
 
-            // Envoi du message SQS pour déclencher Summarize Worker
-            String message = "{ \"bucket\": \"" + bucket + "\", \"key\": \"" + key + "\" }";
+            // Envoi du message SQS pour declencher Summarize Worker
+            String message = String.format(
+                    "{ \"bucket\": \"%s\", \"key\": \"%s\" }",
+                    bucket,
+                    key
+            );
             client.sendMessageToSqs(queueUrl, message);
 
-            System.out.println("Upload Client terminé!");
-        } catch(Exception e){
-            logger.error("Unexpected error during UploadClient execution: {}", e.getMessage(), e);
-
+            System.out.println("Upload Client finished!");
+        } catch (Exception e) {
+            LOGGER.error(
+                    "Unexpected error during UploadClient execution: {}",
+                    e.getMessage(),
+                    e
+            );
         }
-
     }
 
 }

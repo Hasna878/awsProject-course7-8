@@ -15,14 +15,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
 
 public class SummarizeWorkerAws {
 
     // À ADAPTER AVEC LES VRAIES VALEURS
     private static final Region REGION = Region.EU_WEST_3; // Paris
-    private static final String SUMMARIZE_QUEUE_URL   = "https://sqs.eu-west-3.amazonaws.com/123456789012/summarize-queue";
-    private static final String CONSOLIDATE_QUEUE_URL = "https://sqs.eu-west-3.amazonaws.com/123456789012/consolidate-queue";
+    private static final String SUMMARIZE_QUEUE_URL =
+            "https://sqs.eu-west-3.amazonaws.com/123456789012/summarize-queue";
+    private static final String CONSOLIDATE_QUEUE_URL =
+            "https://sqs.eu-west-3.amazonaws.com/123456789012/consolidate-queue";
 
     private final S3Client s3;
     private final SqsClient sqs;
@@ -50,7 +51,11 @@ public class SummarizeWorkerAws {
                 System.err.println("Erreur lors du poll SQS : " + e.getMessage());
                 e.printStackTrace();
                 // petite pause pour éviter de spammer en cas d'erreur répétée
-                try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
@@ -112,7 +117,14 @@ public class SummarizeWorkerAws {
             System.out.println("Résumé local généré : " + tempOutput);
 
             // 3) Déterminer la clé de sortie pour le résumé
-            String fileName = Paths.get(rawKey).getFileName().toString(); // ex: data-20221207.csv
+            Path rawPath = Paths.get(rawKey);
+            Path rawFileName = rawPath.getFileName();
+            if (rawFileName == null) {
+                throw new IllegalArgumentException(
+                        "Raw key must include a file name."
+                );
+            }
+            String fileName = rawFileName.toString(); // ex: data-20221207.csv
             String summaryFileName = fileName.replace(".csv", "-summary.csv");
             String summaryKey = "summaries/" + summaryFileName;
 
@@ -160,13 +172,21 @@ public class SummarizeWorkerAws {
     private static String extractJsonValue(String json, String fieldName) {
         String pattern = "\"" + fieldName + "\"";
         int idx = json.indexOf(pattern);
-        if (idx == -1) return null;
+        if (idx == -1) {
+            return null;
+        }
         int colon = json.indexOf(":", idx);
-        if (colon == -1) return null;
+        if (colon == -1) {
+            return null;
+        }
         int firstQuote = json.indexOf("\"", colon);
-        if (firstQuote == -1) return null;
+        if (firstQuote == -1) {
+            return null;
+        }
         int secondQuote = json.indexOf("\"", firstQuote + 1);
-        if (secondQuote == -1) return null;
+        if (secondQuote == -1) {
+            return null;
+        }
         return json.substring(firstQuote + 1, secondQuote);
     }
 }

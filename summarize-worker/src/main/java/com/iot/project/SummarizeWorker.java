@@ -7,6 +7,7 @@ import com.opencsv.exceptions.CsvValidationException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,7 +41,8 @@ public class SummarizeWorker {
         // Map clé -> agrégat
         Map<String, Aggregate> aggregates = new HashMap<>();
 
-        try (CSVReader reader = new CSVReader(new FileReader(inputCsv))) {
+        try (CSVReader reader = new CSVReader(
+                new FileReader(inputCsv, StandardCharsets.UTF_8))) {
 
             // ---- 1) Lire l’entête ----
             String[] header = reader.readNext(); // peut lancer CsvValidationException
@@ -50,9 +52,9 @@ public class SummarizeWorker {
 
             // Trouver les index des colonnes qui nous intéressent
             int idxTimestamp = findIndex(header, "Timestamp");
-            int idxSrcIp     = findIndex(header, "Src IP");
-            int idxDstIp     = findIndex(header, "Dst IP");
-            int idxFlowDur   = findIndex(header, "Flow Duration");
+            int idxSrcIp = findIndex(header, "Src IP");
+            int idxDstIp = findIndex(header, "Dst IP");
+            int idxFlowDur = findIndex(header, "Flow Duration");
             int idxTotFwdPkt = findIndex(header, "Tot Fwd Pkts");
 
             if (idxTimestamp == -1 || idxSrcIp == -1 || idxDstIp == -1
@@ -67,16 +69,16 @@ public class SummarizeWorker {
             while ((line = reader.readNext()) != null) { // readNext peut aussi lancer CsvValidationException
                 lineCount++;
 
-                String timestamp   = line[idxTimestamp];
-                String srcIp       = line[idxSrcIp];
-                String dstIp       = line[idxDstIp];
-                String flowDurStr  = line[idxFlowDur];
-                String totFwdPktStr= line[idxTotFwdPkt];
+                String timestamp = line[idxTimestamp];
+                String srcIp = line[idxSrcIp];
+                String dstIp = line[idxDstIp];
+                String flowDurStr = line[idxFlowDur];
+                String totFwdPktStr = line[idxTotFwdPkt];
 
                 // Extraire la date (partie avant l'espace)
                 String date = extractDate(timestamp);
 
-                long flowDur   = parseLongSafe(flowDurStr);
+                long flowDur = parseLongSafe(flowDurStr);
                 long totFwdPkt = parseLongSafe(totFwdPktStr);
 
                 // Clé : Date|SrcIP|DstIP
@@ -97,11 +99,12 @@ public class SummarizeWorker {
         }
 
         // ---- 3) Écrire le fichier résumé ----
-        try (CSVWriter writer = new CSVWriter(new FileWriter(outputCsv))) {
+        try (CSVWriter writer = new CSVWriter(
+                new FileWriter(outputCsv, StandardCharsets.UTF_8))) {
             // Header
             String[] outHeader = {
-                    "Date", "SrcIP", "DstIP",
-                    "TotalFlowDuration", "TotalFwdPkt"
+                "Date", "SrcIP", "DstIP",
+                "TotalFlowDuration", "TotalFwdPkt"
             };
             writer.writeNext(outHeader);
 
@@ -111,16 +114,16 @@ public class SummarizeWorker {
                 Aggregate agg = entry.getValue();
 
                 String[] parts = key.split("\\|", 3);
-                String date  = parts[0];
+                String date = parts[0];
                 String srcIp = parts[1];
                 String dstIp = parts[2];
 
                 String[] row = {
-                        date,
-                        srcIp,
-                        dstIp,
-                        String.valueOf(agg.totalFlowDuration),
-                        String.valueOf(agg.totalFwdPkt)
+                    date,
+                    srcIp,
+                    dstIp,
+                    String.valueOf(agg.totalFlowDuration),
+                    String.valueOf(agg.totalFwdPkt)
                 };
                 writer.writeNext(row);
             }
@@ -140,7 +143,9 @@ public class SummarizeWorker {
     // Extrait juste la date du timestamp
     // Exemple : "2022-12-07 10:15:30" -> "2022-12-07"
     private static String extractDate(String timestamp) {
-        if (timestamp == null) return "";
+        if (timestamp == null) {
+            return "";
+        }
         String[] parts = timestamp.split(" ");
         return parts[0]; // première partie avant l'espace
     }

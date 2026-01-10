@@ -10,9 +10,10 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
+import java.io.IOException;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Files;
 
@@ -60,8 +61,10 @@ public class ExportClient {
         s3.getObject(req, ResponseTransformer.toFile(tempFile));
 
         // 2. Lire le fichier et filtrer
-        try (CSVReader reader = new CSVReader(new FileReader(tempFile.toFile()));
-             CSVWriter writer = new CSVWriter(new FileWriter("export.csv"))) {
+        try (CSVReader reader = new CSVReader(
+                new FileReader(tempFile.toFile(), StandardCharsets.UTF_8));
+             CSVWriter writer = new CSVWriter(
+                     new FileWriter("export.csv", StandardCharsets.UTF_8))) {
 
             String[] header = reader.readNext(); // peut lancer CsvValidationException
             if (header == null) {
