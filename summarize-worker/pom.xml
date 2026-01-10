@@ -88,7 +88,7 @@
                 <version>3.3.1</version>
 
                 <configuration>
-                    <configLocation>${basedir}/config/checkstyle/checkstyle.xml</configLocation>
+                    <configLocation>file:${basedir}/config/checkstyle/checkstyle.xml</configLocation>
                     <encoding>UTF-8</encoding>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
