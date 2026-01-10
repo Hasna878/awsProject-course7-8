@@ -1,0 +1,47 @@
+name: CI - Analysis (style, bugs, secrets)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    name: Quality ${{ matrix.module }} (Java 21)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - upload-client
+          - summarize-worker
+          - consolidator-worker
+          - export-client
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Run Checkstyle + SpotBugs (verify)
+        working-directory: ${{ matrix.module }}
+        run: mvn -B -DskipTests verify
+
+  secrets:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
